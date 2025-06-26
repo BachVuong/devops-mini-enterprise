@@ -8,10 +8,12 @@ on:
       - ".github/workflows/ci-cd.yml"
 
 env:
-  IMAGE: ${{ secrets.DOCKERHUB_USER }}/flask-demo
+  IMAGE_REPO: ${{ secrets.DOCKERHUB_USER }}/flask-demo
+  TAG: ${{ github.sha }}
+  IMAGE_FULL: ${{ env.IMAGE_REPO }}:${{ env.TAG }}
 
 jobs:
-  build-and-deploy:
+  build-deploy:
     runs-on: self-hosted
 
     steps:
@@ -28,15 +30,16 @@ jobs:
       with:
         context: ./03_app
         push: true
-        tags: ${{ env.IMAGE }}:${{ github.sha }}
+        tags: ${{ env.IMAGE_FULL }}
 
     - name: Set kubeconfig
       run: echo "${{ secrets.KUBE_CONFIG_B64 }}" | base64 -d > $HOME/.kube/config
 
     - name: Deploy to K3s
       run: |
+        # CẢNH BÁO: container trong YAML tên 'flask-demo'
         kubectl -n demo set image deploy/flask-demo \
-          flask=${{ env.IMAGE }}:${{ github.sha }}
+          flask-demo=${{ env.IMAGE_FULL }}
 
     - name: Wait rollout
       run: kubectl -n demo rollout status deploy/flask-demo --timeout=120s
