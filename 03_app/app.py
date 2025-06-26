@@ -8,7 +8,7 @@ def health():
 
 @app.route("/hello/<name>")
 def hello(name):
-    return jsonify(message=f"Hello {name}!"), 200
+    return jsonify(message=f"Hi {name}!"), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
