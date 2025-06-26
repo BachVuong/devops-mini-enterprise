@@ -1,0 +1,26 @@
+- name: uninstall old docker
+  apt:
+    name:
+      - docker
+      - docker-engine
+      - docker.io
+    state: absent
+    purge: yes
+    autoremove: yes
+
+- name: Cài Docker từ script
+  shell: curl -fsSL https://get.docker.com | sh
+  args:
+    creates: /usr/bin/docker
+
+- name: Thêm user vào nhóm docker
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+
+- name: Kích hoạt Docker
+  systemd:
+    name: docker
+    state: started
+    enabled: yes

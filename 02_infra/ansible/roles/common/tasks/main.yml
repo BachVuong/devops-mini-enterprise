@@ -1,0 +1,12 @@
+- name: install basic
+  apt:
+    name:
+      - curl
+      - wget
+      - sudo
+      - gnupg
+      - ca-certificates
+      - python3
+      - python3-pip
+    update_cache: yes
+    state: present

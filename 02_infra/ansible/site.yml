@@ -1,0 +1,17 @@
+- name: Cài gói cơ bản
+  hosts: all
+  become: true
+  roles:
+    - common
+
+- name: Cài Docker
+  hosts: all
+  become: true
+  roles:
+    - docker
+
+- name: Cài K3s cluster
+  hosts: all
+  become: true
+  roles:
+    - k3s
