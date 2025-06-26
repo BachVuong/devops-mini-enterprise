@@ -1,0 +1,42 @@
+name: CI/CD DevOps Mini
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "03_app/**"
+      - ".github/workflows/ci-cd.yml"
+
+env:
+  IMAGE: ${{ secrets.DOCKERHUB_USER }}/flask-demo
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Docker login
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USER }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build & push image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./03_app
+        push: true
+        tags: ${{ env.IMAGE }}:${{ github.sha }}
+
+    - name: Set kubeconfig
+      run: echo "${{ secrets.KUBE_CONFIG_B64 }}" | base64 -d > $HOME/.kube/config
+
+    - name: Deploy to K3s
+      run: |
+        kubectl -n demo set image deploy/flask-demo \
+          flask=${{ env.IMAGE }}:${{ github.sha }}
+
+    - name: Wait rollout
+      run: kubectl -n demo rollout status deploy/flask-demo --timeout=120s
