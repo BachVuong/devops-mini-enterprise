@@ -23,11 +23,10 @@ data:
     [OUTPUT]
         Name  loki
         Match *
-        Url   http://loki:3100/loki/api/v1/push
+        Url   http://loki.logging.svc.cluster.local:3100/loki/api/v1/push
         BatchWait    1
         BatchSize    10240
         Labels       job=fluentbit,host=$HOSTNAME
-        RemoveKeys   stream
         AutoKubernetesLabels On
 
   parsers.conf: |

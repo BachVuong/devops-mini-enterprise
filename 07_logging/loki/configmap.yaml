@@ -9,11 +9,11 @@ data:
     server:
       http_listen_port: 3100
     common:
-      path_prefix: /tmp/loki     # ✅ FIX
+      path_prefix: /tmp/loki               # ✅ Thay vì /wal
     ingester:
       wal:
         enabled: true
-        dir: /tmp/loki/wal       # ✅ FIX
+        dir: /tmp/loki/wal                 # ✅ Có quyền ghi
       lifecycler:
         ring:
           kvstore:

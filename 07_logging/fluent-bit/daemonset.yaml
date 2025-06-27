@@ -12,15 +12,14 @@ spec:
       labels:
         app: fluent-bit
     spec:
-      serviceAccountName: fluent-bit
       containers:
-        - name: fluent-bit
-          image: fluent/fluent-bit:2.1.4
-          volumeMounts:
-            - name: varlog
-              mountPath: /var/log
-            - name: config
-              mountPath: /fluent-bit/etc/
+      - name: fluent-bit
+        image: fluent/fluent-bit:2.1.4
+        volumeMounts:
+          - name: varlog
+            mountPath: /var/log
+          - name: config
+            mountPath: /fluent-bit/etc/
       volumes:
         - name: varlog
           hostPath:
