@@ -45,3 +45,21 @@ jobs:
 
     - name: Wait rollout
       run: kubectl -n demo rollout status deploy/flask-demo --timeout=120s
+  trivy-scan:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set Docker image tag
+        run: echo "IMG=flask-demo:test" >> $GITHUB_ENV
+
+      - name: Build Docker image
+        run: docker build -t ${{ env.IMG }} ./03_app
+
+      - name: Run Trivy scan
+        uses: aquasecurity/trivy-action@v0.19.0
+        with:
+          image-ref: ${{ env.IMG }}
+          severity: CRITICAL,HIGH
+          format: table
+          exit-code: 1
