@@ -100,6 +100,11 @@ jobs:
         run: |
           kubectl get ns demo || kubectl create namespace demo
 
+      - name: Ensure deployment exists
+        run: |
+          kubectl -n demo get deploy flask-deploy || \
+            kubectl apply -f 04_k8s/ -n demo
+
       - name: Update deployment image
         run: |
           kubectl -n demo set image deploy/flask-demo \
