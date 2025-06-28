@@ -1,4 +1,4 @@
-name: CI/CD DevOps Mini
+name: CI/CD DevOps Mini  ❄️
 
 on:
   push:
@@ -7,42 +7,67 @@ on:
       - "03_app/**"
       - ".github/workflows/ci-cd.yml"
 
+env:
+  IMAGE_REPO: ${{ secrets.DOCKERHUB_USER }}/flask-demo   # repo chuẩn
+  IMAGE_TAG: ${{ github.sha }}                           # SHA commit
+  IMAGE_FULL: ${{ secrets.DOCKERHUB_USER }}/flask-demo:${{ github.sha }}
+
 jobs:
-  trivy-scan:
-    name: 🔍 Trivy Scan Image
+# ─────────────────────────────────────────────────────────────
+# 1. Unit test (Pytest)
+# ─────────────────────────────────────────────────────────────
+  test:
+    name: 🧪 Unit Test
     runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set image tag for scan
-        run: |
-          echo "IMG=flask-demo:test" >> $GITHUB_ENV
-
-      - name: Build image for Trivy scan
-        run: docker build -t $IMG ./03_app
-
-      - name: Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@v0.12.0
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          image-ref: ${{ env.IMG }}
-          format: table
-          severity: CRITICAL,HIGH
-          exit-code: 1
+          python-version: "3.12"
 
-  build-deploy:
-    name: 🚀 Build & Deploy to K3s
+      - name: Install dependencies
+        run: |
+          pip install -r 03_app/requirements.txt
+          pip install pytest
+
+      - name: Run pytest
+        run: pytest 03_app -q
+
+# ─────────────────────────────────────────────────────────────
+# 2. Trivy security scan
+# ─────────────────────────────────────────────────────────────
+  trivy-scan:
+    name: 🔍 Trivy Scan
     runs-on: self-hosted
-    needs: trivy-scan
+    needs: test        # chỉ chạy khi test pass
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Compose image tag
-        run: |
-          echo "IMAGE_REPO=${{ secrets.DOCKERHUB_USER }}/flask-demo" >> $GITHUB_ENV
-          echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_ENV
-          echo "IMAGE_FULL=${{ secrets.DOCKERHUB_USER }}/flask-demo:${{ github.sha }}" >> $GITHUB_ENV
+      - name: Build local image for scan
+        run: docker build -t flask-demo:test ./03_app
+
+      - name: Run Trivy
+        uses: aquasecurity/trivy-action@v0.12.0   # phiên bản hợp lệ
+        with:
+          image-ref: "flask-demo:test"
+          severity: CRITICAL,HIGH
+          format: table
+          exit-code: 1       # FAIL nếu có CVE mức cao
+
+# ─────────────────────────────────────────────────────────────
+# 3. Build & Push image
+# ─────────────────────────────────────────────────────────────
+  build-push:
+    name: 🏗️ Build & Push
+    runs-on: self-hosted
+    needs: trivy-scan      # chạy sau khi scan pass
+
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Docker login
         uses: docker/login-action@v3
@@ -57,10 +82,24 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_FULL }}
 
+# ─────────────────────────────────────────────────────────────
+# 4. Deploy to K3s
+# ─────────────────────────────────────────────────────────────
+  deploy:
+    name: 🚀 Deploy to K3s
+    runs-on: self-hosted
+    needs: build-push
+
+    steps:
+      - uses: actions/checkout@v4   # chỉ cần repo để tham chiếu
+
       - name: Set kubeconfig
         run: echo "${{ secrets.KUBE_CONFIG_B64 }}" | base64 -d > $HOME/.kube/config
 
-      - name: Deploy to K3s
+      - name: Update deployment image
         run: |
-          kubectl set image deployment/flask-deploy flask-container=${{ env.IMAGE_FULL }} -n default
-          kubectl rollout status deployment/flask-deploy -n default
+          kubectl -n demo set image deploy/flask-demo \
+            flask=${{ env.IMAGE_FULL }}
+
+      - name: Wait for rollout
+        run: kubectl -n demo rollout status deploy/flask-demo --timeout=120s
