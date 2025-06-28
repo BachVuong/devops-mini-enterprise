@@ -108,7 +108,7 @@ jobs:
       - name: Update deployment image
         run: |
           kubectl -n demo set image deploy/flask-demo \
-            flask=${{ env.IMAGE_FULL }}
+            flas-demok=${{ env.IMAGE_FULL }}
 
       - name: Wait for rollout
         run: kubectl -n demo rollout status deploy/flask-demo --timeout=120s
