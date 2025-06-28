@@ -50,7 +50,7 @@ jobs:
         run: docker build -t flask-demo:test ./03_app
 
       - name: Run Trivy
-        uses: aquasecurity/trivy-action@v0.12.0   # phiên bản hợp lệ
+        uses: aquasecurity/trivy-action@master  # phiên bản hợp lệ
         with:
           image-ref: "flask-demo:test"
           severity: CRITICAL,HIGH
