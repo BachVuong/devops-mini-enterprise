@@ -8,58 +8,59 @@ on:
       - ".github/workflows/ci-cd.yml"
 
 jobs:
-  build-deploy:
-    runs-on: self-hosted
-
-    steps:
-    - uses: actions/checkout@v4
-
-    # -------- Compose image tag (không lỗi env) ----------
-    - name: Compose image tag
-      run: |
-        echo "IMAGE_REPO=${{ secrets.DOCKERHUB_USER }}/flask-demo" >> $GITHUB_ENV
-        echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_ENV
-        echo "IMAGE_FULL=${{ secrets.DOCKERHUB_USER }}/flask-demo:${{ github.sha }}" >> $GITHUB_ENV
-
-    - name: Docker login
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USER }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-    - name: Build & push image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./03_app
-        push: true
-        tags: ${{ env.IMAGE_FULL }}
-
-    - name: Set kubeconfig
-      run: echo "${{ secrets.KUBE_CONFIG_B64 }}" | base64 -d > $HOME/.kube/config
-
-    # ---- Deploy (container name = flask-demo) ----
-    - name: Deploy to K3s
-      run: |
-        kubectl -n demo set image deploy/flask-demo \
-          flask-demo=${{ env.IMAGE_FULL }}
-
-    - name: Wait rollout
-      run: kubectl -n demo rollout status deploy/flask-demo --timeout=120s
   trivy-scan:
+    name: 🔍 Trivy Scan Image
     runs-on: self-hosted
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set Docker image tag
-        run: echo "IMG=flask-demo:test" >> $GITHUB_ENV
+      - name: Set image tag for scan
+        run: |
+          echo "IMG=flask-demo:test" >> $GITHUB_ENV
 
-      - name: Build Docker image
-        run: docker build -t ${{ env.IMG }} ./03_app
+      - name: Build image for Trivy scan
+        run: docker build -t $IMG ./03_app
 
-      - name: Run Trivy scan
+      - name: Trivy vulnerability scan
         uses: aquasecurity/trivy-action@v0.19.0
         with:
           image-ref: ${{ env.IMG }}
-          severity: CRITICAL,HIGH
           format: table
-          exit-code: 1
+          severity: CRITICAL,HIGH
+          exit-code: 1     # 🔥 Fail nếu có lỗi
+
+  build-deploy:
+    name: 🚀 Build & Deploy to K3s
+    runs-on: self-hosted
+    needs: trivy-scan
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compose image tag
+        run: |
+          echo "IMAGE_REPO=${{ secrets.DOCKERHUB_USER }}/flask-demo" >> $GITHUB_ENV
+          echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_ENV
+          echo "IMAGE_FULL=${{ secrets.DOCKERHUB_USER }}/flask-demo:${{ github.sha }}" >> $GITHUB_ENV
+
+      - name: Docker login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & push image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./03_app
+          push: true
+          tags: ${{ env.IMAGE_FULL }}
+
+      - name: Set kubeconfig
+        run: echo "${{ secrets.KUBE_CONFIG_B64 }}" | base64 -d > $HOME/.kube/config
+
+      - name: Deploy to K3s
+        run: |
+          kubectl set image deployment/flask-deploy flask-container=${{ env.IMAGE_FULL }} -n default
+          kubectl rollout status deployment/flask-deploy -n default
