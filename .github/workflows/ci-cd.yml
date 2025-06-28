@@ -33,7 +33,7 @@ jobs:
 
 
       - name: Run pytest
-        run:pthon3 -m pytest 03_app -q
+        run:python3 -m pytest 03_app -q
 
 # ─────────────────────────────────────────────────────────────
 # 2. Trivy security scan
