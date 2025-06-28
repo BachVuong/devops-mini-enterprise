@@ -47,7 +47,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build local image for scan
-        run: docker build -t flask-demo:test ./03_app
+        run: docker build --network=host -t flask-demo:test ./03_app
 
       - name: Run Trivy
         uses: aquasecurity/trivy-action@master  # phiên bản hợp lệ
