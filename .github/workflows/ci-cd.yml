@@ -53,7 +53,7 @@ jobs:
         uses: aquasecurity/trivy-action@master  # phiên bản hợp lệ
         with:
           image-ref: "flask-demo:test"
-          severity: CRITICAL
+          severity: CRITICAL, HIGH
           format: table
           exit-code: 1       # FAIL nếu có CVE mức cao
 
@@ -95,6 +95,10 @@ jobs:
 
       - name: Set kubeconfig
         run: echo "${{ secrets.KUBE_CONFIG_B64 }}" | base64 -d > $HOME/.kube/config
+
+      - name: Ensure namespace demo exists
+        run: |
+          kubectl get ns demo || kubectl create namespace demo
 
       - name: Update deployment image
         run: |
