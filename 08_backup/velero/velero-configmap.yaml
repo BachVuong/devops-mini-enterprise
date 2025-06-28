@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aws-config
+  namespace: velero
+data:
+  config: |
+    [default]
+    s3 =
+        addressing_style = path
+        signature_version = s3v4
